@@ -8,6 +8,8 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/cookbook-ohai
 Source0: %{name}-%{version}.tar.gz
 
+Requires: ipmitool
+
 %description
 %{summary}
 
