@@ -167,7 +167,7 @@ if redborder[:is_sensor]
     bridge_type  = ""
     bridgeDir.to_a.each do |eth|
       next if eth == "." or eth == ".."
-      next unless eth =~ /eth[\d]+/
+      next unless eth =~ /^e*/
       thash={}
       thash[:status]=`cat /sys/class/net/#{eth.to_s}/operstate 2>/dev/null`.chomp
       thash[:type]=`ethtool #{eth.to_s} 2>/dev/null | grep "Supported ports:" | sed 's/Supported ports: //' | tr '[' ' ' | tr ']' ' ' | awk '{print $1}'`.chomp.downcase
