@@ -219,11 +219,11 @@ if redborder[:is_sensor]
       end
     end
 
-    #if `/opt/rb/bin/rb_bypass.sh -b #{iface} -g &>/dev/null; echo -n $?` == "1"
-    #  redborder[:segments][iface.to_sym]["status"] = "bypass"
-    #else
-    #  redborder[:segments][iface.to_sym]["status"] = "on"
-    #end
+    if `/usr/lib/redborder/bin/rb_bypass.sh -b #{iface} -g &>/dev/null; echo -n $?` == "1"
+      redborder[:segments][iface.to_sym]["status"] = "bypass"
+    else
+      redborder[:segments][iface.to_sym]["status"] = "on"
+    end
 
   end
 
