@@ -4,6 +4,7 @@ redborder Mash.new
 redborder[:rpms] = Mash.new
 redborder[:is_sensor]=false
 redborder[:is_manager]=false
+redborder[:is_proxy]=false
 
 rpmsout=`rpm -qa | grep redborder-ips`
 if $?.success? 
@@ -13,7 +14,12 @@ if $?.success?
     redborder[:barnyard2]= Mash.new
     redborder[:barnyard2][:version] = `barnyard2 --version 2>&1|grep -i Version|sed 's/.*Version //'| sed 's/ .*//'|awk '{printf("%s", $1)}'`
 else
-    redborder[:is_manager]=true
+    rpmsout=`rpm -qa | grep redborder-proxy`
+    if $?.success?
+      redborder[:is_proxy]=true
+    else
+      redborder[:is_manager]=true
+    end
 end
 
 redborder[:dmidecode] = Mash.new
