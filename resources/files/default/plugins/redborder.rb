@@ -3,17 +3,15 @@ provides 'redborder'
 redborder Mash.new
 redborder[:rpms] = Mash.new
 redborder[:is_sensor]=false
-redborder[:is_manager]=false
+rpms = `rpm -qa`
+%w(manager proxy ips).map { |m_type| redborder[("is_"+m_type).to_sym] = rpms.include?("redborder-" + m_type) }
 
-rpmsout=`rpm -qa | grep redborder-ips`
-if $?.success? 
+if redborder.is_ips
     redborder[:is_sensor]=true
     redborder[:snort]= Mash.new
     redborder[:snort][:version] = `snort --version 2>&1|grep Version|sed 's/.*Version //' | sed 's/ .*//'|awk '{printf("%s", $1)}'`
     redborder[:barnyard2]= Mash.new
     redborder[:barnyard2][:version] = `barnyard2 --version 2>&1|grep -i Version|sed 's/.*Version //'| sed 's/ .*//'|awk '{printf("%s", $1)}'`
-else
-    redborder[:is_manager]=true
 end
 
 redborder[:dmidecode] = Mash.new
