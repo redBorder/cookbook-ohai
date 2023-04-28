@@ -57,15 +57,18 @@ if redborder[:is_manager]
   redborder[:cluster][:members]  = Array.new
   redborder[:cluster][:general][:timestamp] = Time.now.to_i
 
-  services=["chef-client", "consul", "zookeeper", "kafka", "webui", "rb-workers", "redborder-monitor", "druid-coordinator", "druid-realtime", "druid-middlemanager", "druid-overlord", "druid-historical", "druid-broker", "opscode-erchef", "postgresql", "redborder-postgresql", "nginx", "memcached", "n2klocd", "redborder-nmsp", "redborder-social", "opscode-bookshelf", "opscode-chef-mover", "opscode-rabbitmq", "http2k", "redborder-cep", "snmpd", "snmptrapd", "redborder-dswatcher", "redborder-events-counter", "sfacctd", "redborder-ale", "logstash", "mongod", "oozie", "rb-sequence-oozie", "clamd", "k2http", "aerospike", "drill"]
+  services=["chef-client", "consul", "zookeeper", "kafka", "webui", "rb-workers", "redborder-monitor", "druid-coordinator", "druid-realtime", "druid-middlemanager", "druid-overlord", "druid-historical", "druid-broker", "opscode-erchef", "postgresql", "redborder-postgresql", "nginx", "memcached", "n2klocd", "redborder-nmsp", "redborder-social", "opscode-bookshelf", "opscode-chef-mover", "opscode-rabbitmq", "http2k", "redborder-cep", "snmpd", "snmptrapd", "redborder-dswatcher", "redborder-events-counter", "sfacctd", "redborder-ale", "logstash", "mongod"]
   services.each_with_index do |s,i|
     redborder[:cluster][:services] << Mash.new
     redborder[:cluster][:services][i][:name] = s
 
     is_service_running = `systemctl is-active #{s}`.chomp == "active"
     is_service_enabled = `systemctl is-enabled #{s}`.chomp == "enabled"
-    redborder[:cluster][:services][i][:status] = is_service_running
-    redborder[:cluster][:services][i][:ok]     = is_service_enabled
+
+    file_exist = ["/usr/lib/", "/etc/"].any? { |path| File.exist?("#{path}systemd/system/#{s}.service")}
+
+    redborder[:cluster][:services][i][:status] = file_exist && is_service_running
+    redborder[:cluster][:services][i][:ok]     = file_exist || !is_service_enabled
 
   end
 
