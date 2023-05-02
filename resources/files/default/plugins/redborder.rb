@@ -57,6 +57,7 @@ if redborder[:is_manager]
   redborder[:cluster][:members]  = Array.new
   redborder[:cluster][:general][:timestamp] = Time.now.to_i
 
+  services=["chef-client", "consul", "zookeeper", "kafka", "webui", "rb-workers", "redborder-monitor", "druid-coordinator", "druid-realtime", "druid-middlemanager", "druid-overlord", "druid-historical", "druid-broker", "opscode-erchef", "postgresql", "redborder-postgresql", "nginx", "memcached", "n2klocd", "redborder-nmsp", "redborder-social", "opscode-bookshelf", "opscode-chef-mover", "opscode-rabbitmq", "http2k", "redborder-cep", "snmpd", "snmptrapd", "redborder-dswatcher", "redborder-events-counter", "sfacctd", "redborder-ale", "logstash", "mongod"]
   services.each_with_index do |s,i|
     redborder[:cluster][:services] << Mash.new
     redborder[:cluster][:services][i][:name] = s
