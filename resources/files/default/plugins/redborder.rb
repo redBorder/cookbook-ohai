@@ -30,7 +30,7 @@ rpms.each_line do |line|
     if (m[1]=="manager" || m[1]=="repo" || m[1]=="common" || m[1]=="malware")
       redborder[:rpms][m[1]] = m[2].gsub(".el7.rb", "")
     end
-    #TODO: double assignation
+    #TODO: double assignation: is_manager was already assigned
     if (m[1]=="manager")
       redborder[:is_manager]=true
     end
@@ -69,7 +69,10 @@ if redborder[:is_manager]
 
     is_service_running = `systemctl is-active #{s}`.chomp == "active"
     is_service_enabled = `systemctl is-enabled #{s}`.chomp == "enabled"
-
+    #TODO: optimize
+    # I propose:
+    # redborder[:cluster][:services][i][:status] =  is_service_running
+    # redborder[:cluster][:services][i][:ok]     =  is_service_enabled == is_service_running
     if is_service_running
       redborder[:cluster][:services][i][:status] =  is_service_running
       redborder[:cluster][:services][i][:ok]     =  is_service_enabled
