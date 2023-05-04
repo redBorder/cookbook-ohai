@@ -3,16 +3,40 @@ provides 'redborder'
 redborder Mash.new
 redborder[:rpms] = Mash.new
 redborder[:is_sensor]=false
-rpms = `rpm -qa`
-%w(manager proxy ips).map { |m_type| redborder[("is_"+m_type).to_sym] = rpms.include?("redborder-" + m_type) }
+redborder[:is_manager]=false
 
-if redborder.is_ips
-    redborder[:is_sensor]=true
-    redborder[:snort]= Mash.new
-    redborder[:snort][:version] = `snort --version 2>&1|grep Version|sed 's/.*Version //' | sed 's/ .*//'|awk '{printf("%s", $1)}'`
-    redborder[:barnyard2]= Mash.new
-    redborder[:barnyard2][:version] = `barnyard2 --version 2>&1|grep -i Version|sed 's/.*Version //'| sed 's/ .*//'|awk '{printf("%s", $1)}'`
+rpms = `rpm -qa | grep redborder-`
+
+%w(manager proxy ips).map { |m_type| redborder[("is_"+m_type).to_sym] = rpms.include?(m_type) }
+
+rpms.each_line do |line|
+  r = /redborder-([a-z]*)-(.*)\.(noarch)/
+  m = r.match line.chomp
+  if m.nil?
+    # it could be a IPS sensor
+    r = /redborder-([a-zA-Z]*)-([a-z]*)-(.*)\.(noarch)/
+    m = r.match line.chomp
+    if !m.nil?
+      redborder[:rpms]["#{m[1]}-#{m[2]}"] = m[3]
+      if (m[1]=="IPS" and m[2]=="sensor")
+        redborder[:is_sensor]=true
+        redborder[:snort]= Mash.new
+        redborder[:snort][:version] = `snort --version 2>&1|grep Version|sed 's/.*Version //' | sed 's/ .*//'|awk '{printf("%s", $1)}'`
+        redborder[:barnyard2]= Mash.new
+        redborder[:barnyard2][:version] = `barnyard2 --version 2>&1|grep -i Version|sed 's/.*Version //'| sed 's/ .*//'|awk '{printf("%s", $1)}'`
+      end
+    end
+  else
+    if (m[1]=="manager" || m[1]=="repo" || m[1]=="common" || m[1]=="malware")
+      redborder[:rpms][m[1]] = m[2].gsub(".el7.rb", "")
+    end
+    #TODO: double assignation: is_manager was already assigned
+    if (m[1]=="manager")
+      redborder[:is_manager]=true
+    end
+  end
 end
+
 
 redborder[:dmidecode] = Mash.new
 redborder[:dmidecode][:manufacturer]  = `dmidecode -t 1| grep "Manufacturer:" | sed 's/.*Manufacturer: //'`.chomp
@@ -34,19 +58,27 @@ if redborder[:is_manager]
   redborder[:cluster][:members]  = Array.new
   redborder[:cluster][:general][:timestamp] = Time.now.to_i
 
-  services=["chef-client", "keepalived", "zookeeper", "zookeeper2", "kafka", "rb-webui", "rb-workers", "rb-monitor", "druid_coordinator", "druid_realtime", "druid_middleManager", "druid_overlord",  "druid_historical", "druid_broker", "erchef", "postgresql", "nginx", "riak", "riak-cs", "stanchion", "nprobe", "memcached", "storm_nimbus", "storm_supervisor", "pgpool", "n2klocd", "freeradius", "nmspd", "rb-sociald", "trap2kafka", "gridgain", "n2kmobiled", "bookshelf", "chef-solr", "chef-expander", "rabbitmq", "hadoop_namenode", "hadoop_datanode", "hadoop_resourcemanager","hadoop_historyserver", "hadoop_nodemanager", "storm_ui", "rb-discover", "oozie", "rb-enrich", "rb-darklistd", "awslogs", "rb-cloudwatch", "newrelic-sysmond", "newrelic-plugin-agent", "rb-sequence-oozie", "clamd", "http2k", "k2http", "cep", "sqsld", "rb-zkcmd", "rb-snmp", "aerospike", "drill", "hadoop_zkfc", "hadoop_journalnode", "secor", "dswatcher", "events-counter", "sfacctd", "rb-ale", "logstash", "mongod", "secor-vault"]
+  services=["chef-client", "consul", "zookeeper", "kafka", "webui", "rb-workers", "redborder-monitor", "druid-coordinator", 
+            "druid-realtime", "druid-middlemanager", "druid-overlord", "druid-historical", "druid-broker", "opscode-erchef", 
+            "postgresql", "redborder-postgresql", "nginx", "memcached", "n2klocd", "redborder-nmsp", "redborder-social", 
+            "opscode-bookshelf", "opscode-chef-mover", "opscode-rabbitmq", "http2k", "redborder-cep", "snmpd", "snmptrapd", 
+            "redborder-dswatcher", "redborder-events-counter", "sfacctd", "redborder-ale", "logstash", "mongod", "minio"]
   services.each_with_index do |s,i|
     redborder[:cluster][:services] << Mash.new
     redborder[:cluster][:services][i][:name] = s
-    serviceout=`if [ -f /etc/init.d/#{s} ]; then /etc/init.d/#{s} status &>/dev/null; echo $?; else echo 3; fi`.chomp
-    shouldrun=false
-    shouldrun=(File.read("/opt/rb/etc/mode/#{s}").chomp == "enabled") if File.exists?"/opt/rb/etc/mode/#{s}"
-    if serviceout=="0"
-      redborder[:cluster][:services][i][:status] = true
-      redborder[:cluster][:services][i][:ok]     = shouldrun
+
+    is_service_running = `systemctl is-active #{s}`.chomp == "active"
+    is_service_enabled = `systemctl is-enabled #{s}`.chomp == "enabled"
+    #TODO: optimize
+    # I propose:
+    # redborder[:cluster][:services][i][:status] =  is_service_running
+    # redborder[:cluster][:services][i][:ok]     =  is_service_enabled == is_service_running
+    if is_service_running
+      redborder[:cluster][:services][i][:status] =  is_service_running
+      redborder[:cluster][:services][i][:ok]     =  is_service_enabled
     else
-      redborder[:cluster][:services][i][:status] = false
-      redborder[:cluster][:services][i][:ok]     = !shouldrun
+      redborder[:cluster][:services][i][:status] =  is_service_running
+      redborder[:cluster][:services][i][:ok]     =  !is_service_enabled
     end
   end
 
@@ -113,8 +145,10 @@ unless match.nil?
   redborder[:uptime]["15minute"] = match[3]
 end
 
-#redborder[:install_date] = `[ -f /opt/rb/etc/installed.txt ] && cat /opt/rb/etc/installed.txt 2>/dev/null`
-#redborder[:install_date] = redborder[:install_date].chomp
+
+inst = `rpm -q basesystem --qf '%{installtime:date}\n'`.chomp
+redborder[:install_date] = inst
+
 redborder[:manager_host] = `[ -f /etc/chef/client.rb ] && cat /etc/chef/client.rb |grep chef_server_url|awk '{print $2}'|sed 's|^.*//||'|sed 's|".*$||'|awk '{printf("%s",$1);}'`
 
 redborder[:has_watchdog] = File.chardev? "/dev/watchdog"
@@ -130,9 +164,9 @@ if redborder[:is_sensor]
   models_map['ips2080'] = {'model' => 'redborder IPS 2080', 'cpu' => 'E5-1680v3', 'sockets' => '1', 'motherboard' => 'X10SRL-F', 'minimal_ram' => '32'}
   models_map['ips2090'] = {'model' => 'redborder IPS 2090', 'cpu' => 'E5-2699v3', 'sockets' => '1', 'motherboard' => 'X10SRL-F', 'minimal_ram' => '64'}
   models_map['ips3040'] = {'model' => 'redborder IPS 3040', 'cpu' => 'E5-2640v3', 'sockets' => '2', 'motherboard' => 'X10SRL-F', 'minimal_ram' => '64'}
-  models_map['ips3080'] = {'model' => 'redborder IPS 3080', 'cpu' => 'E5-2680v3', 'sockets' => '2', 'motherboard' => 'X10SRL-F', 'minimal_ram' => '128'}                        
+  models_map['ips3080'] = {'model' => 'redborder IPS 3080', 'cpu' => 'E5-2680v3', 'sockets' => '2', 'motherboard' => 'X10SRL-F', 'minimal_ram' => '128'}
   models_map['ips4010'] = {'model' => 'redborder IPS 4010', 'cpu' => 'E5-2699v3', 'sockets' => '2', 'motherboard' => 'X10SRL-F', 'minimal_ram' => '128'}
- 
+
   specs = {}
   specs['cpu_model'] = `cat /proc/cpuinfo | grep -m1 "model name" | awk '{print $7 $8}'`.delete!("\n")
   specs['sockets'] = `lscpu | grep Socket | awk '{print $2}'`.delete!("\n")
@@ -252,7 +286,7 @@ if redborder[:is_sensor]
       else
         redborder[:segments][bond_iface.to_sym][:master] = "n/a"
         redborder[:segments][bond_iface.to_sym][:bypass] = false
-      end    
+      end
     end
   end
 end
