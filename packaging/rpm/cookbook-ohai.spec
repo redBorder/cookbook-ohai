@@ -47,6 +47,8 @@ esac
 %doc
 
 %changelog
+* Fri Sep 22 2023 Miguel Negrón <manegron@redborder.com> - 2.0.0-1
+- Remove social
 * Thu May 04 2023 Luis J. Blanco Mier <ljblanco@redborder.com> - 1.0.1-1
 - Services and IPS info migrated
 * Mon Apr 04 2022 David Vanhoucke <dvanhoucke@redborder.com> - 1.0.0-1
