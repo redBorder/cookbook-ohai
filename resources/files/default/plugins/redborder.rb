@@ -60,7 +60,7 @@ if redborder[:is_manager]
 
   services=["chef-client", "consul", "zookeeper", "kafka", "webui", "rb-workers", "redborder-monitor", "druid-coordinator", 
             "druid-realtime", "druid-middlemanager", "druid-overlord", "druid-historical", "druid-broker", "opscode-erchef", 
-            "postgresql", "redborder-postgresql", "nginx", "memcached", "n2klocd", "redborder-nmsp", "redborder-social", 
+            "postgresql", "redborder-postgresql", "nginx", "memcached", "n2klocd", "redborder-nmsp",  
             "opscode-bookshelf", "opscode-chef-mover", "opscode-rabbitmq", "http2k", "redborder-cep", "snmpd", "snmptrapd", 
             "redborder-dswatcher", "redborder-events-counter", "sfacctd", "redborder-ale", "logstash", "mongod", "minio"]
   services.each_with_index do |s,i|
